@@ -57,10 +57,10 @@ PROCESS_STACK 0x800
 define HAL_DISABLE_LOOP_DELAY
 
 # enable CAN support
-PB8 CAN1_RX CAN1
-PB9 CAN1_TX CAN1
+PA11 CAN1_RX CAN1
+PA12 CAN1_TX CAN1
 
-CAN_ORDER 1 2
+CAN_ORDER 1
 
 # debugger support
 PA13 JTMS-SWDIO SWD
@@ -74,4 +74,4 @@ define HAL_BOOTLOADER_TIMEOUT 1000
 
 
 
-define CAN_APP_NODE_NAME "org.ardupilot.Pegasus-L496-BL"
+define CAN_APP_NODE_NAME "org.ardupilot.Pegasus-L496"
