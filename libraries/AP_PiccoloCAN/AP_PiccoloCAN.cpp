@@ -20,7 +20,6 @@
 #include <AP_AHRS/AP_AHRS.h>
 
 #include "AP_PiccoloCAN.h"
-
 #if HAL_PICCOLO_CAN_ENABLE
 
 #include <AP_Param/AP_Param.h>
@@ -399,6 +398,7 @@ void AP_PiccoloCAN::update()
 }
 
 // send ESC telemetry messages over MAVLink
+#if HAL_WITH_ESC_TELEM
 void AP_PiccoloCAN::send_esc_telemetry_mavlink(uint8_t mav_chan)
 {
     // Arrays to store ESC telemetry data
@@ -469,7 +469,7 @@ void AP_PiccoloCAN::send_esc_telemetry_mavlink(uint8_t mav_chan)
         }
     }
 }
-
+#endif /** HAL_WITH_ESC_TELEM **/
 
 // send servo messages over CAN
 void AP_PiccoloCAN::send_servo_messages(void)

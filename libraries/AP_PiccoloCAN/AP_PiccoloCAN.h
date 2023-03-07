@@ -87,8 +87,10 @@ public:
     // called from SRV_Channels
     void update();
 
+#if HAL_WITH_ESC_TELEM
     // send ESC telemetry messages over MAVLink
     void send_esc_telemetry_mavlink(uint8_t mav_chan);
+#endif /** HAL_WITH_ESC_TELEM **/
 
     // return true if a particular servo is 'active' on the Piccolo interface
     bool is_servo_channel_active(uint8_t chan);
