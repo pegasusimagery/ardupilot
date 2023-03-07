@@ -69,6 +69,7 @@ def build(bld):
                      'AP_EFI',
                      'AP_CheckFirmware',
                      'AP_Proximity',
+                     'AP_PiccoloCAN/piccolo_protocol',
                      ]
     bld.ap_stlib(
         name= 'AP_Periph_libs',
