@@ -28,7 +28,7 @@
 #include <AP_HAL/utility/RingBuffer.h>
 #include <AP_Common/AP_FWVersion.h>
 #include <dronecan_msgs.h>
-
+#include <AP_PiccoloCAN/AP_PiccoloCAN.h>
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 #include <hal.h>
 #include <AP_HAL_ChibiOS/CANIface.h>
