@@ -47,7 +47,7 @@
 #include <AP_CANManager/AP_CANSensor.h>
 #endif
 
-#if HAL_PICCOLO_CAN_ENABLE
+#if HAL_NUM_CAN_IFACES >= 2 && HAL_PICCOLO_CAN_ENABLE
 AP_PiccoloCAN piccolo;
 #endif
 
@@ -1542,12 +1542,11 @@ void AP_Periph_FW::can_start()
             }
 #endif
         }
-#if HAL_PICCOLO_CAN_ENABLE
+#if HAL_NUM_CAN_IFACES >= 2 && HAL_PICCOLO_CAN_ENABLE
         if (g.can_protocol[i] == AP_CANManager::Driver_Type_PiccoloCAN) {
             piccolo.init(i, false);
             piccolo.add_interface(can_iface_periph[i]);
         }
-
 #endif
     }
 
