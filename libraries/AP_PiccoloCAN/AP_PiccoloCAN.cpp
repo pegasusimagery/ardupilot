@@ -114,6 +114,8 @@ AP_PiccoloCAN::AP_PiccoloCAN()
     debug_can(AP_CANManager::LOG_INFO, "PiccoloCAN: constructed\n\r");
 }
 
+AP_PiccoloCAN::~AP_PiccoloCAN() { }
+
 AP_PiccoloCAN *AP_PiccoloCAN::get_pcan(uint8_t driver_index)
 {
     if (driver_index >= AP::can().get_num_drivers() ||
