@@ -79,8 +79,6 @@ define STM32_ADC_USE_ADC1 FALSE
 
 define HAL_NO_MONITOR_THREAD
 
-include ../include/minimize_features.inc
-
 define AP_PARAM_MAX_EMBEDDED_PARAM 512
 
 define CAN_APP_NODE_NAME "org.ardupilot.Pegasus-L496"
