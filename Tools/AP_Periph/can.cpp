@@ -28,6 +28,7 @@
 #include <AP_HAL/utility/RingBuffer.h>
 #include <AP_Common/AP_FWVersion.h>
 #include <dronecan_msgs.h>
+#include "minervaCAN.h"
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 #include <hal.h>
@@ -47,6 +48,9 @@
 #include <AP_CANManager/AP_CANSensor.h>
 #endif
 
+#if HAL_NUM_CAN_IFACES >= 2 && PERIPH_MINERVA_CAN_ENABLE
+AP_MinervaCAN minerva;
+#endif
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 extern const HAL_SITL &hal;
@@ -1535,6 +1539,13 @@ void AP_Periph_FW::can_start()
             can_iface_periph[i]->init(g.can_baudrate[i], AP_HAL::CANIface::NormalMode);
 #endif
         }
+        
+#if HAL_NUM_CAN_IFACES >= 2 && PERIPH_MINERVA_CAN_ENABLE
+        if (g.can_protocol[i] == MINERVA_CAN_PROTOCOL) {
+            minerva.init(i, false);
+            minerva.add_interface(can_iface_periph[i]);
+        }
+#endif
     }
 
 #if AP_CAN_SLCAN_ENABLED
