@@ -39,8 +39,9 @@ public:
         return _singleton;
     }
 
-private:
     bool handle_message(AP_HAL::CANFrame &frame);
+
+private:
 
     static AP_EFI_Currawong_ECU* _singleton;
 
