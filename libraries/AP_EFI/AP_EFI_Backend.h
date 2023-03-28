@@ -32,7 +32,8 @@ public:
     virtual void update() = 0;
 
 #if AP_SCRIPTING_ENABLED
-    virtual bool handle_scripting(const EFI_State &efi_state) { return false; }
+    virtual bool set_state(const EFI_State &efi_state) { return false; }
+    virtual EFI_State get_state() { return internal_state; }
 #endif
 
 protected:

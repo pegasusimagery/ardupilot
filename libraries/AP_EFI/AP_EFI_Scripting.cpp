@@ -9,7 +9,7 @@ void AP_EFI_Scripting::update()
 }
 
 // handle EFI message from scripting
-bool AP_EFI_Scripting::handle_scripting(const EFI_State &efi_state)
+bool AP_EFI_Scripting::set_state(const EFI_State &efi_state)
 {
     internal_state = efi_state;
     copy_to_frontend();

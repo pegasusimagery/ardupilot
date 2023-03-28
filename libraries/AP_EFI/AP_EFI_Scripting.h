@@ -11,6 +11,6 @@ public:
 
     void update() override;
 
-    bool handle_scripting(const EFI_State &efi_state) override;
+    bool set_state(const EFI_State &efi_state) override;
 };
 #endif // AP_EFI_SCRIPTING_ENABLED

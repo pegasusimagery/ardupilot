@@ -649,7 +649,8 @@ userdata EFI_State field throttle_out float'skip_check read write
 userdata EFI_State field pt_compensation float'skip_check read write
 
 ap_object AP_EFI_Backend depends (AP_EFI_SCRIPTING_ENABLED == 1)
-ap_object AP_EFI_Backend method handle_scripting boolean EFI_State
+ap_object AP_EFI_Backend method set_state boolean EFI_State
+ap_object AP_EFI_Backend method get_state EFI_State'Null
 
 singleton AP_EFI depends (AP_EFI_SCRIPTING_ENABLED == 1)
 singleton AP_EFI rename efi

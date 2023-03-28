@@ -928,9 +928,13 @@ function Location_ud:get_distance(loc) end
 local AP_EFI_Backend_ud = {}
 
 -- desc
+---@return EFI_State_ud
+function AP_EFI_Backend_ud:get_state() end
+
+-- desc
 ---@param state EFI_State_ud
 ---@return boolean
-function AP_EFI_Backend_ud:handle_scripting(state) end
+function AP_EFI_Backend_ud:set_state(state) end
 
 -- desc
 ---@class ScriptingCANBuffer_ud
