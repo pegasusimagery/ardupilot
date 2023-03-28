@@ -233,7 +233,7 @@ local function engine_control(_driver)
        efi_state:last_updated_ms(millis())
 
         -- Set the EFI_State into the EFI scripting driver
-        efi_backend:handle_scripting(efi_state)
+        efi_backend:set_state(efi_state)
     end
 
     -- send throttle

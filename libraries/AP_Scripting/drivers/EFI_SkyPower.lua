@@ -349,7 +349,7 @@ local function engine_control(_driver, _idx)
 
 
         -- Set the EFI_State into the EFI scripting driver
-        efi_backend:handle_scripting(efi_state)
+        efi_backend:set_state(efi_state)
     end
 
     --- send throttle command, thr is 0 to 1
