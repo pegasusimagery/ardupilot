@@ -59,10 +59,10 @@ public:
 
     static const struct AP_Param::GroupInfo var_info[];
 
-    // Return PiccoloCAN from @driver_index or nullptr if it's not ready or doesn't exist
-    static AP_MinervaCAN *get_pcan(uint8_t driver_index);
+    // Return MinervaCAN from @driver_index or nullptr if it's not ready or doesn't exist
+    static AP_MinervaCAN *get_mcan(uint8_t driver_index);
 
-    // initialize PiccoloCAN bus
+    // initialize MinervaCAN bus
     void init(uint8_t driver_index, bool enable_filters) override;
     bool add_interface(AP_HAL::CANIface* can_iface) override;
 

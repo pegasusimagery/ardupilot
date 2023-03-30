@@ -74,7 +74,7 @@ AP_MinervaCAN::AP_MinervaCAN()
 
 AP_MinervaCAN::~AP_MinervaCAN() { }
 
-AP_MinervaCAN *AP_MinervaCAN::get_pcan(uint8_t driver_index)
+AP_MinervaCAN *AP_MinervaCAN::get_mcan(uint8_t driver_index)
 {
     if (driver_index >= AP::can().get_num_drivers() ||
         AP::can().get_driver_type(driver_index) != MINERVA_CAN_PROTOCOL) {
@@ -244,23 +244,12 @@ bool AP_MinervaCAN::read_frame(AP_HAL::CANFrame &recv_frame, uint64_t timeout)
 // called from SRV_Channels
 void AP_MinervaCAN::update()
 {
-    uint64_t timestamp = AP_HAL::micros64();
-
 #if HAL_EFI_CURRAWONG_ECU_ENABLED
     if (_ecu_id != 0) {
         _ecu_info.command = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle); 
         _ecu_info.newCommand = true;
     }
 #endif // HAL_EFI_CURRAWONG_ECU_ENABLED
-
-    AP_Logger *logger = AP_Logger::get_singleton();
-
-    // Push received telemetry data into the logging system
-    if (logger && logger->logging_enabled()) {
-
-        WITH_SEMAPHORE(_telem_sem);
-        (void)timestamp; // We still might want this, remove the warnings
-    }
 }
 
 #if HAL_EFI_CURRAWONG_ECU_ENABLED
@@ -272,12 +261,10 @@ void AP_MinervaCAN::send_ecu_messages(void)
 
     // No ECU node id set, don't send anything
     if (_ecu_id == 0) {
-        printf("\r\nNo ECU ID\r\n");
         return;
     }
 
     if (_ecu_info.newCommand) {
-        printf("\r\nSending ECU command\r\n");
         encodeECU_ThrottleCommandPacket(&txFrame, _ecu_info.command);
         txFrame.id |= (uint8_t) _ecu_id;
 
