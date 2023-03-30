@@ -820,6 +820,10 @@ static void handle_act_command(CanardInstance* ins, CanardRxTransfer* transfer)
     }
 
     for (uint8_t i=0; i < data_count; i++) {
+        if (data[i].actuator_id == 13) {
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, data[i].command_value);
+            continue;
+        }
         switch (data[i].command_type) {
         case UAVCAN_EQUIPMENT_ACTUATOR_COMMAND_COMMAND_TYPE_UNITLESS:
             periph.rcout_srv_unitless(data[i].actuator_id, data[i].command_value);
@@ -1775,6 +1779,9 @@ void AP_Periph_FW::can_update()
         can_efi_update();
     #endif
     }
+    #if PERIPH_MINERVA_CAN_ENABLE
+    minerva.update();
+    #endif
     const uint32_t now_us = AP_HAL::micros();
     while ((AP_HAL::micros() - now_us) < 1000) {
         hal.scheduler->delay_microseconds(HAL_PERIPH_LOOP_DELAY_US);
