@@ -32,7 +32,7 @@
 #define MINERVA_MSG_RATE_HZ_MAX 500
 #define MINERVA_MSG_RATE_HZ_DEFAULT 500
 
-#define PICCOLO_CAN_ECU_ID_DEFAULT 255 // This one is kept as piccolo since EFI speaks piccoloCAN
+#define MINERVA_CAN_ECU_ID_DEFAULT 255
 
 
 class AP_MinervaCAN : public AP_CANDriver
@@ -85,6 +85,8 @@ private:
 
     // interpret an ECU message received over CAN
     bool handle_ecu_message(AP_HAL::CANFrame &frame);
+
+    void encodeHFE_ECU_ThrottleCommandPacket(AP_HAL::CANFrame &txFrame, float throttleCommand);
 #endif
 
     bool _initialized;

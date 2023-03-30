@@ -52,7 +52,7 @@ const AP_Param::GroupInfo AP_MinervaCAN::var_info[] = {
     // @Description: Node ID to send ECU throttle messages to. Set to zero to disable ECU throttle messages. Set to 255 to broadcast to all ECUs.
     // @Range: 0 255
     // @User: Advanced
-    AP_GROUPINFO("ECU_ID", 5, AP_MinervaCAN, _ecu_id, PICCOLO_CAN_ECU_ID_DEFAULT), // Since this is a piccoloCAN ECU we'll just use their definition
+    AP_GROUPINFO("ECU_ID", 5, AP_MinervaCAN, _ecu_id, MINERVA_CAN_ECU_ID_DEFAULT), // Since this is a piccoloCAN ECU we'll just use their definition
 
     // @Param: ECU_RT
     // @DisplayName: ECU command output rate
@@ -265,7 +265,7 @@ void AP_MinervaCAN::send_ecu_messages(void)
     }
 
     if (_ecu_info.newCommand) {
-        encodeECU_ThrottleCommandPacket(&txFrame, _ecu_info.command);
+        encodeHFE_ECU_ThrottleCommandPacket(txFrame, _ecu_info.command);
         txFrame.id |= (uint8_t) _ecu_id;
 
         _ecu_info.newCommand = false;
@@ -282,6 +282,26 @@ bool AP_MinervaCAN::handle_ecu_message(AP_HAL::CANFrame &frame)
         return ecu->handle_message(frame);
     }
     return false;
+}
+
+/**
+ * HFE ECUs use a different throttle command packet structure despite sharing the telemetry structure with piccoloCAN
+ * This function creates the different structure. 
+ * In this case, the HFE uses one byte for throttle where piccoloCAN uses two
+*/
+void AP_MinervaCAN::encodeHFE_ECU_ThrottleCommandPacket(AP_HAL::CANFrame &txFrame, float throttleCommand) {
+    // HFE ECU accepts throttle from 0-255
+    // scale the Throttle
+    uint8_t scaledvalue = (uint8_t)(floorf((throttleCommand*255.0f/100.0f)+0.5f));
+    txFrame.data[0] = scaledvalue;
+    txFrame.data[1] = 0;
+
+
+    uint32_t id = (((uint8_t) AP_MinervaCAN::MessageGroup::ECU_IN) << 24) |       // CAN Group ID
+                  ((txFrame.id & 0xFF) << 16);                                    // Message ID
+    id |= AP_HAL::CANFrame::FlagEFF;
+    txFrame.id = id;
+    txFrame.dlc = 2;
 }
 #endif // HAL_EFI_CURRAWONG_ECU_ENABLED
 
@@ -304,35 +324,6 @@ const uint8_t* getECUPacketDataConst(const void* pkt)
     AP_HAL::CANFrame* frame = (AP_HAL::CANFrame*) pkt;
 
     return (const uint8_t*) frame->data;
-}
-
-//! Complete a packet after the data have been encoded
-void finishECUPacket(void* pkt, int size, uint32_t packetID)
-{
-    AP_HAL::CANFrame* frame = (AP_HAL::CANFrame*) pkt;
-
-    if (size > AP_HAL::CANFrame::MaxDataLen) {
-        size = AP_HAL::CANFrame::MaxDataLen;
-    }
-
-    frame->dlc = size;
-
-    /* Encode the CAN ID
-     * 0x09mmdddd
-     * - 07 = ECU_IN (to and ECU) group ID
-     * - mm = Message ID
-     * - dd = Device ID
-     *
-     * Note: The Device ID (lower 16 bits of the frame ID) will have to be inserted later
-     */
-
-    uint32_t id = (((uint8_t) AP_MinervaCAN::MessageGroup::ECU_IN) << 24) |       // CAN Group ID
-                  ((packetID & 0xFF) << 16);                                       // Message ID
-
-    // Extended frame format
-    id |= AP_HAL::CANFrame::FlagEFF;
-
-    frame->id = id;
 }
 
 //! \return the size of a packet from the packet header
