@@ -48,7 +48,7 @@
 #include <AP_CANManager/AP_CANSensor.h>
 #endif
 
-#if HAL_NUM_CAN_IFACES >= 2 && PERIPH_MINERVA_CAN_ENABLE
+#if HAL_NUM_CAN_IFACES >= 2 && defined(HAL_PERIPH_MINERVA_CAN_ENABLE)
 AP_MinervaCAN minerva;
 #endif
 
@@ -1544,7 +1544,7 @@ void AP_Periph_FW::can_start()
 #endif
         }
         
-#if HAL_NUM_CAN_IFACES >= 2 && PERIPH_MINERVA_CAN_ENABLE
+#if HAL_NUM_CAN_IFACES >= 2 && defined(HAL_PERIPH_MINERVA_CAN_ENABLE)
         if (g.can_protocol[i] == MINERVA_CAN_PROTOCOL) {
             minerva.init(i, false);
             minerva.add_interface(can_iface_periph[i]);
@@ -1779,7 +1779,7 @@ void AP_Periph_FW::can_update()
         can_efi_update();
     #endif
     }
-    #if PERIPH_MINERVA_CAN_ENABLE
+    #ifdef HAL_PERIPH_MINERVA_CAN_ENABLE
     minerva.update();
     #endif
     const uint32_t now_us = AP_HAL::micros();

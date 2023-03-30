@@ -19,7 +19,7 @@
 #include <AP_HAL/AP_HAL.h>
 
 #include "minervaCAN.h"
-#if PERIPH_MINERVA_CAN_ENABLE
+#ifdef HAL_PERIPH_MINERVA_CAN_ENABLE
 
 #include <AP_Param/AP_Param.h>
 #include <AP_CANManager/AP_CANManager.h>

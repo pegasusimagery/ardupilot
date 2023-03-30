@@ -24,7 +24,7 @@
 
 #include <AP_EFI/AP_EFI_Currawong_ECU.h>
 
-#if PERIPH_MINERVA_CAN_ENABLE
+#ifdef HAL_PERIPH_MINERVA_CAN_ENABLE
 
 #define MINERVA_CAN_PROTOCOL AP_CANManager::Driver_Type_Scripting2 // We'll use scripting2 for now since this is a periph
 
