@@ -28,7 +28,7 @@
 #include <AP_HAL/utility/RingBuffer.h>
 #include <AP_Common/AP_FWVersion.h>
 #include <dronecan_msgs.h>
-
+#include <AP_PiccoloCAN/AP_PiccoloCAN.h>
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 #include <hal.h>
 #include <AP_HAL_ChibiOS/CANIface.h>
@@ -47,6 +47,9 @@
 #include <AP_CANManager/AP_CANSensor.h>
 #endif
 
+#if HAL_NUM_CAN_IFACES >= 2 && HAL_PICCOLO_CAN_ENABLE
+AP_PiccoloCAN piccolo;
+#endif
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 extern const HAL_SITL &hal;
@@ -1511,9 +1514,19 @@ void AP_Periph_FW::can_start()
 #if HAL_CANFD_SUPPORTED
             can_iface_periph[i]->init(g.can_baudrate[i], g.can_fdbaudrate[i]*1000000U, AP_HAL::CANIface::NormalMode);
 #else
-            can_iface_periph[i]->init(g.can_baudrate[i], AP_HAL::CANIface::NormalMode);
+            if (can_iface_periph[i]->init(g.can_baudrate[i], AP_HAL::CANIface::NormalMode) == false) {
+                Debug("Failure Initializing CAN iface %d\r\n", i);
+            } else {
+                Debug("Success Initializing CAN iface %d\r\n", i);
+            }
 #endif
         }
+#if HAL_NUM_CAN_IFACES >= 2 && HAL_PICCOLO_CAN_ENABLE
+        if (g.can_protocol[i] == AP_CANManager::Driver_Type_PiccoloCAN) {
+            piccolo.init(i, false);
+            piccolo.add_interface(can_iface_periph[i]);
+        }
+#endif
     }
 
 #if AP_CAN_SLCAN_ENABLED

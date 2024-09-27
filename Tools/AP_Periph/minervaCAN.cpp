@@ -12,41 +12,26 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Oliver Walters / Currawong Engineering Pty Ltd
+ * Author: Robert Taylor / Pegasus Imagery Ltd
  */
 
 
 #include <AP_HAL/AP_HAL.h>
-#include <AP_AHRS/AP_AHRS.h>
 
-#include "AP_PiccoloCAN.h"
-#if HAL_PICCOLO_CAN_ENABLE
+#include "minervaCAN.h"
+#if HAL_MINERVA_CAN_ENABLE
 
 #include <AP_Param/AP_Param.h>
-#include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_CANManager/AP_CANManager.h>
 #include <AP_Common/AP_Common.h>
 #include <AP_Scheduler/AP_Scheduler.h>
 #include <AP_HAL/utility/sparse-endian.h>
-#include <SRV_Channel/SRV_Channel.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Logger/AP_Logger.h>
 
 #include <AP_EFI/AP_EFI_Currawong_ECU.h>
 
 #include <stdio.h>
-
-// Protocol files for the Velocity ESC
-#include <AP_PiccoloCAN/piccolo_protocol/ESCVelocityProtocol.h>
-#include <AP_PiccoloCAN/piccolo_protocol/ESCPackets.h>
-
-// Protocol files for the CBS servo
-#include <AP_PiccoloCAN/piccolo_protocol/ServoProtocol.h>
-#include <AP_PiccoloCAN/piccolo_protocol/ServoPackets.h>
-
-// Protocol files for the ECU
-#include <AP_PiccoloCAN/piccolo_protocol/ECUProtocol.h>
-#include <AP_PiccoloCAN/piccolo_protocol/ECUPackets.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -56,77 +41,24 @@ extern const AP_HAL::HAL& hal;
 #define debug_can(level_debug, fmt, args...)
 #endif
 
-// table of user-configurable Piccolo CAN bus parameters
-const AP_Param::GroupInfo AP_PiccoloCAN::var_info[] = {
-
-    // @Param: ESC_BM
-    // @DisplayName: ESC channels
-    // @Description: Bitmask defining which ESC (motor) channels are to be transmitted over Piccolo CAN
-    // @Bitmask: 0: ESC 1, 1: ESC 2, 2: ESC 3, 3: ESC 4, 4: ESC 5, 5: ESC 6, 6: ESC 7, 7: ESC 8, 8: ESC 9, 9: ESC 10, 10: ESC 11, 11: ESC 12, 12: ESC 13, 13: ESC 14, 14: ESC 15, 15: ESC 16, 16: ESC 17, 17: ESC 18, 18: ESC 19, 19: ESC 20, 20: ESC 21, 21: ESC 22, 22: ESC 23, 23: ESC 24, 24: ESC 25, 25: ESC 26, 26: ESC 27, 27: ESC 28, 28: ESC 29, 29: ESC 30, 30: ESC 31, 31: ESC 32
-    // @User: Advanced
-    AP_GROUPINFO("ESC_BM", 1, AP_PiccoloCAN, _esc_bm, 0xFFFF),
-
-    // @Param: ESC_RT
-    // @DisplayName: ESC output rate
-    // @Description: Output rate of ESC command messages
-    // @Units: Hz
-    // @User: Advanced
-    // @Range: 1 500
-    AP_GROUPINFO("ESC_RT", 2, AP_PiccoloCAN, _esc_hz, PICCOLO_MSG_RATE_HZ_DEFAULT),
-
-    // @Param: SRV_BM
-    // @DisplayName: Servo channels
-    // @Description: Bitmask defining which servo channels are to be transmitted over Piccolo CAN
-    // @Bitmask: 0: Servo 1, 1: Servo 2, 2: Servo 3, 3: Servo 4, 4: Servo 5, 5: Servo 6, 6: Servo 7, 7: Servo 8, 8: Servo 9, 9: Servo 10, 10: Servo 11, 11: Servo 12, 12: Servo 13, 13: Servo 14, 14: Servo 15, 15: Servo 16
-    // @User: Advanced
-    AP_GROUPINFO("SRV_BM", 3, AP_PiccoloCAN, _srv_bm, 0xFFFF),
-
-    // @Param: SRV_RT
-    // @DisplayName: Servo command output rate
-    // @Description: Output rate of servo command messages
-    // @Units: Hz
-    // @User: Advanced
-    // @Range: 1 500
-    AP_GROUPINFO("SRV_RT", 4, AP_PiccoloCAN, _srv_hz, PICCOLO_MSG_RATE_HZ_DEFAULT),
-#if AP_EFI_CURRAWONG_ECU_ENABLED
-    // @Param: ECU_ID
-    // @DisplayName: ECU Node ID
-    // @Description: Node ID to send ECU throttle messages to. Set to zero to disable ECU throttle messages. Set to 255 to broadcast to all ECUs.
-    // @Range: 0 255
-    // @User: Advanced
-    AP_GROUPINFO("ECU_ID", 5, AP_PiccoloCAN, _ecu_id, PICCOLO_CAN_ECU_ID_DEFAULT),
-
-    // @Param: ECU_RT
-    // @DisplayName: ECU command output rate
-    // @Description: Output rate of ECU command messages
-    // @Units: Hz
-    // @User: Advanced
-    // @Range: 1 500
-    AP_GROUPINFO("ECU_RT", 6, AP_PiccoloCAN, _ecu_hz, PICCOLO_MSG_RATE_HZ_DEFAULT),
-#endif
-    AP_GROUPEND
-};
-
-AP_PiccoloCAN::AP_PiccoloCAN()
+AP_MinervaCAN::AP_MinervaCAN()
 {
-    AP_Param::setup_object_defaults(this, var_info);
-
-    debug_can(AP_CANManager::LOG_INFO, "PiccoloCAN: constructed\n\r");
+    debug_can(AP_CANManager::LOG_INFO, "MinervaCAN: constructed\n\r");
 }
 
-AP_PiccoloCAN::~AP_PiccoloCAN() { }
+AP_MinervaCAN::~AP_MinervaCAN() { }
 
-AP_PiccoloCAN *AP_PiccoloCAN::get_pcan(uint8_t driver_index)
+AP_MinervaCAN *AP_MinervaCAN::get_pcan(uint8_t driver_index)
 {
     if (driver_index >= AP::can().get_num_drivers() ||
-        AP::can().get_driver_type(driver_index) != AP_CAN::Protocol::PiccoloCAN) {
+        AP::can().get_driver_type(driver_index) != AP_CANManager::Driver_Type_PiccoloCAN) {
         return nullptr;
     }
 
-    return static_cast<AP_PiccoloCAN*>(AP::can().get_driver(driver_index));
+    return static_cast<AP_MinervaCAN*>(AP::can().get_driver(driver_index));
 }
 
-bool AP_PiccoloCAN::add_interface(AP_HAL::CANIface* can_iface) {
+bool AP_MinervaCAN::add_interface(AP_HAL::CANIface* can_iface) {
     if (_can_iface != nullptr) {
         debug_can(AP_CANManager::LOG_ERROR, "PiccoloCAN: Multiple Interface not supported\n\r");
         return false;
@@ -152,7 +84,7 @@ bool AP_PiccoloCAN::add_interface(AP_HAL::CANIface* can_iface) {
 }
 
 // initialize PiccoloCAN bus
-void AP_PiccoloCAN::init(uint8_t driver_index, bool enable_filters)
+void AP_MinervaCAN::init(uint8_t driver_index, bool enable_filters)
 {
     _driver_index = driver_index;
 
@@ -163,7 +95,7 @@ void AP_PiccoloCAN::init(uint8_t driver_index, bool enable_filters)
         return;
     }
     // start calls to loop in separate thread
-    if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_PiccoloCAN::loop, void), _thread_name, 4096, AP_HAL::Scheduler::PRIORITY_MAIN, 1)) {
+    if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_MinervaCAN::loop, void), _thread_name, 4096, AP_HAL::Scheduler::PRIORITY_MAIN, 1)) {
         debug_can(AP_CANManager::LOG_ERROR, "PiccoloCAN: couldn't create thread\n\r");
         return;
     }
@@ -176,14 +108,14 @@ void AP_PiccoloCAN::init(uint8_t driver_index, bool enable_filters)
 }
 
 // loop to send output to CAN devices in background thread
-void AP_PiccoloCAN::loop()
+void AP_MinervaCAN::loop()
 {
     AP_HAL::CANFrame txFrame {};
     AP_HAL::CANFrame rxFrame {};
 
     uint16_t esc_tx_counter = 0;
     uint16_t servo_tx_counter = 0;
-#if AP_EFI_CURRAWONG_ECU_ENABLED
+#if HAL_EFI_CURRAWONG_ECU_ENABLED
     uint16_t ecu_tx_counter = 0;
 #endif
 
@@ -208,7 +140,7 @@ void AP_PiccoloCAN::loop()
         _srv_hz.set(constrain_int16(_srv_hz, PICCOLO_MSG_RATE_HZ_MIN, PICCOLO_MSG_RATE_HZ_MAX));
 
         uint16_t servoCmdRateMs = 1000 / _srv_hz;
-#if AP_EFI_CURRAWONG_ECU_ENABLED
+#if HAL_EFI_CURRAWONG_ECU_ENABLED
         _ecu_hz.set(constrain_int16(_ecu_hz, PICCOLO_MSG_RATE_HZ_MIN, PICCOLO_MSG_RATE_HZ_MAX));
 
         uint16_t ecuCmdRateMs = 1000 / _ecu_hz;
@@ -230,7 +162,7 @@ void AP_PiccoloCAN::loop()
             send_servo_messages();
         }
 
-#if AP_EFI_CURRAWONG_ECU_ENABLED
+#if HAL_EFI_CURRAWONG_ECU_ENABLED
         // Transmit ecu throttle commands at regular intervals
         if (ecu_tx_counter++ > ecuCmdRateMs) {
             ecu_tx_counter = 0;
@@ -272,7 +204,7 @@ void AP_PiccoloCAN::loop()
 
                 break;
             case MessageGroup::ECU_OUT:
-            #if AP_EFI_CURRAWONG_ECU_ENABLED
+            #if HAL_EFI_CURRAWONG_ECU_ENABLED
                 if (handle_ecu_message(rxFrame)) {
                     // Returns true if the message was successfully decoded
                 }
@@ -286,7 +218,7 @@ void AP_PiccoloCAN::loop()
 }
 
 // write frame on CAN bus, returns true on success
-bool AP_PiccoloCAN::write_frame(AP_HAL::CANFrame &out_frame, uint64_t timeout)
+bool AP_MinervaCAN::write_frame(AP_HAL::CANFrame &out_frame, uint64_t timeout)
 {
     if (!_initialized) {
         debug_can(AP_CANManager::LOG_ERROR, "PiccoloCAN: Driver not initialized for write_frame\n\r");
@@ -306,7 +238,7 @@ bool AP_PiccoloCAN::write_frame(AP_HAL::CANFrame &out_frame, uint64_t timeout)
 }
 
 // read frame on CAN bus, returns true on succses
-bool AP_PiccoloCAN::read_frame(AP_HAL::CANFrame &recv_frame, uint64_t timeout)
+bool AP_MinervaCAN::read_frame(AP_HAL::CANFrame &recv_frame, uint64_t timeout)
 {
     if (!_initialized) {
         debug_can(AP_CANManager::LOG_ERROR, "PiccoloCAN: Driver not initialized for read_frame\n\r");
@@ -328,7 +260,7 @@ bool AP_PiccoloCAN::read_frame(AP_HAL::CANFrame &recv_frame, uint64_t timeout)
 }
 
 // called from SRV_Channels
-void AP_PiccoloCAN::update()
+void AP_MinervaCAN::update()
 {
     uint64_t timestamp = AP_HAL::micros64();
 
@@ -365,12 +297,12 @@ void AP_PiccoloCAN::update()
         }
     }
 
-#if AP_EFI_CURRAWONG_ECU_ENABLED
+#if HAL_EFI_CURRAWONG_ECU_ENABLED
     if (_ecu_id != 0) {
         _ecu_info.command = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
         _ecu_info.newCommand = true;
     }
-#endif // AP_EFI_CURRAWONG_ECU_ENABLED
+#endif // HAL_EFI_CURRAWONG_ECU_ENABLED
 
     AP_Logger *logger = AP_Logger::get_singleton();
 
@@ -383,24 +315,14 @@ void AP_PiccoloCAN::update()
             CBSServo_Info_t &servo = _servo_info[ii];
 
             if (servo.newTelemetry) {
-                union {
-                    Servo_ErrorBits_t ebits;
-                    uint8_t errors;
-                } err;
-                err.ebits = servo.statusA.errors;
+
                 logger->Write_ServoStatus(
                     timestamp,
                     ii,
                     (float) servo.statusA.position,         // Servo position (represented in microsecond units)
                     (float) servo.statusB.current * 0.01f, // Servo force (actually servo current, 0.01A per bit)
                     (float) servo.statusB.speed,            // Servo speed (degrees per second)
-                    (uint8_t) abs(servo.statusB.dutyCycle),  // Servo duty cycle (absolute value as it can be +/- 100%)
-                    servo.statusA.command,
-                    servo.statusB.voltage*0.01,
-                    servo.statusB.current*0.01,
-                    servo.statusB.temperature,
-                    servo.statusB.temperature,
-                    err.errors
+                    (uint8_t) abs(servo.statusB.dutyCycle)  // Servo duty cycle (absolute value as it can be +/- 100%)
                 );
 
                 servo.newTelemetry = false;
@@ -411,7 +333,7 @@ void AP_PiccoloCAN::update()
 
 // send ESC telemetry messages over MAVLink
 #if HAL_WITH_ESC_TELEM
-void AP_PiccoloCAN::send_esc_telemetry_mavlink(uint8_t mav_chan)
+void AP_MinervaCAN::send_esc_telemetry_mavlink(uint8_t mav_chan)
 {
     // Arrays to store ESC telemetry data
     uint8_t temperature[4] {};
@@ -484,7 +406,7 @@ void AP_PiccoloCAN::send_esc_telemetry_mavlink(uint8_t mav_chan)
 #endif /** HAL_WITH_ESC_TELEM **/
 
 // send servo messages over CAN
-void AP_PiccoloCAN::send_servo_messages(void)
+void AP_MinervaCAN::send_servo_messages(void)
 {
     AP_HAL::CANFrame txFrame {};
 
@@ -553,7 +475,7 @@ void AP_PiccoloCAN::send_servo_messages(void)
 
 
 // send ESC messages over CAN
-void AP_PiccoloCAN::send_esc_messages(void)
+void AP_MinervaCAN::send_esc_messages(void)
 {
     AP_HAL::CANFrame txFrame {};
 
@@ -638,7 +560,7 @@ void AP_PiccoloCAN::send_esc_messages(void)
 
 
 // interpret a servo message received over CAN
-bool AP_PiccoloCAN::handle_servo_message(AP_HAL::CANFrame &frame)
+bool AP_MinervaCAN::handle_servo_message(AP_HAL::CANFrame &frame)
 {
     uint64_t timestamp = AP_HAL::micros64();
 
@@ -689,7 +611,7 @@ bool AP_PiccoloCAN::handle_servo_message(AP_HAL::CANFrame &frame)
 
 
 // interpret an ESC message received over CAN
-bool AP_PiccoloCAN::handle_esc_message(AP_HAL::CANFrame &frame)
+bool AP_MinervaCAN::handle_esc_message(AP_HAL::CANFrame &frame)
 {
     bool result = true;
 
@@ -798,8 +720,8 @@ bool AP_PiccoloCAN::handle_esc_message(AP_HAL::CANFrame &frame)
     return result;
 }
 
-#if AP_EFI_CURRAWONG_ECU_ENABLED
-void AP_PiccoloCAN::send_ecu_messages(void)
+#if HAL_EFI_CURRAWONG_ECU_ENABLED
+void AP_MinervaCAN::send_ecu_messages(void)
 {
     AP_HAL::CANFrame txFrame {};
 
@@ -820,7 +742,7 @@ void AP_PiccoloCAN::send_ecu_messages(void)
     }
 }
 
-bool AP_PiccoloCAN::handle_ecu_message(AP_HAL::CANFrame &frame)
+bool AP_MinervaCAN::handle_ecu_message(AP_HAL::CANFrame &frame)
 {
     // Get the ecu instance
     AP_EFI_Currawong_ECU* ecu = AP_EFI_Currawong_ECU::get_instance();
@@ -829,12 +751,12 @@ bool AP_PiccoloCAN::handle_ecu_message(AP_HAL::CANFrame &frame)
     }
     return false;
 }
-#endif // AP_EFI_CURRAWONG_ECU_ENABLED
+#endif // HAL_EFI_CURRAWONG_ECU_ENABLED
 
 /**
  * Check if a given servo channel is "active" (has been configured for Piccolo control output)
  */
-bool AP_PiccoloCAN::is_servo_channel_active(uint8_t chan)
+bool AP_MinervaCAN::is_servo_channel_active(uint8_t chan)
 {
     // First check if the particular servo channel is enabled in the channel mask
     if (((_srv_bm >> chan) & 0x01) == 0x00) {
@@ -860,7 +782,7 @@ bool AP_PiccoloCAN::is_servo_channel_active(uint8_t chan)
 /**
  * Check if a given ESC channel is "active" (has been configured for Piccolo control output)
  */
-bool AP_PiccoloCAN::is_esc_channel_active(uint8_t chan)
+bool AP_MinervaCAN::is_esc_channel_active(uint8_t chan)
 {
     // First check if the particular ESC channel is enabled in the channel mask
     if (((_esc_bm >> chan) & 0x01) == 0x00) {
@@ -881,7 +803,7 @@ bool AP_PiccoloCAN::is_esc_channel_active(uint8_t chan)
 /**
  * Determine if a servo is present on the CAN bus (has telemetry data been received)
  */
-bool AP_PiccoloCAN::is_servo_present(uint8_t chan, uint64_t timeout_ms)
+bool AP_MinervaCAN::is_servo_present(uint8_t chan, uint64_t timeout_ms)
 {
     if (chan >= PICCOLO_CAN_MAX_NUM_SERVO) {
         return false;
@@ -909,7 +831,7 @@ bool AP_PiccoloCAN::is_servo_present(uint8_t chan, uint64_t timeout_ms)
 /**
  * Determine if an ESC is present on the CAN bus (has telemetry data been received)
  */
-bool AP_PiccoloCAN::is_esc_present(uint8_t chan, uint64_t timeout_ms)
+bool AP_MinervaCAN::is_esc_present(uint8_t chan, uint64_t timeout_ms)
 {
     if (chan >= PICCOLO_CAN_MAX_NUM_ESC) {
         return false;
@@ -937,7 +859,7 @@ bool AP_PiccoloCAN::is_esc_present(uint8_t chan, uint64_t timeout_ms)
 /**
  * Check if a given servo is enabled
  */
-bool AP_PiccoloCAN::is_servo_enabled(uint8_t chan)
+bool AP_MinervaCAN::is_servo_enabled(uint8_t chan)
 {
     if (chan >= PICCOLO_CAN_MAX_NUM_SERVO) {
         return false;
@@ -957,7 +879,7 @@ bool AP_PiccoloCAN::is_servo_enabled(uint8_t chan)
 /**
  * Check if a given ESC is enabled (both hardware and software enable flags)
  */
-bool AP_PiccoloCAN::is_esc_enabled(uint8_t chan)
+bool AP_MinervaCAN::is_esc_enabled(uint8_t chan)
 {
     if (chan >= PICCOLO_CAN_MAX_NUM_ESC) {
         return false;
@@ -980,7 +902,7 @@ bool AP_PiccoloCAN::is_esc_enabled(uint8_t chan)
 }
 
 
-bool AP_PiccoloCAN::pre_arm_check(char* reason, uint8_t reason_len)
+bool AP_MinervaCAN::pre_arm_check(char* reason, uint8_t reason_len)
 {
     // Check that each required servo is present on the bus
     for (uint8_t ii = 0; ii < PICCOLO_CAN_MAX_NUM_SERVO; ii++) {
@@ -1058,9 +980,9 @@ void finishESCVelocityPacket(void* pkt, int size, uint32_t packetID)
      * Note: The Device ID (lower 8 bits of the frame ID) will have to be inserted later
      */
 
-    uint32_t id = (((uint8_t) AP_PiccoloCAN::MessageGroup::ACTUATOR) << 24) |       // CAN Group ID
+    uint32_t id = (((uint8_t) AP_MinervaCAN::MessageGroup::ACTUATOR) << 24) |       // CAN Group ID
                   ((packetID & 0xFF) << 16) |                                       // Message ID
-                  (((uint8_t) AP_PiccoloCAN::ActuatorType::ESC) << 8);              // Actuator type
+                  (((uint8_t) AP_MinervaCAN::ActuatorType::ESC) << 8);              // Actuator type
 
     // Extended frame format
     id |= AP_HAL::CANFrame::FlagEFF;
@@ -1127,9 +1049,9 @@ void finishServoPacket(void* pkt, int size, uint32_t packetID)
      * Note: The Device ID (lower 8 bits of the frame ID) will have to be inserted later
      */
 
-    uint32_t id = (((uint8_t) AP_PiccoloCAN::MessageGroup::ACTUATOR) << 24) |       // CAN Group ID
+    uint32_t id = (((uint8_t) AP_MinervaCAN::MessageGroup::ACTUATOR) << 24) |       // CAN Group ID
                   ((packetID & 0xFF) << 16) |                                       // Message ID
-                  (((uint8_t) AP_PiccoloCAN::ActuatorType::SERVO) << 8);            // Actuator type
+                  (((uint8_t) AP_MinervaCAN::ActuatorType::SERVO) << 8);            // Actuator type
 
     // Extended frame format
     id |= AP_HAL::CANFrame::FlagEFF;

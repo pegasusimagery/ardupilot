@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Oliver Walters / Currawong Engineering Pty Ltd
+ * Author: Robert Taylor / Pegasus Imagery Ltd
  */
 
 #pragma once
@@ -21,39 +21,18 @@
 #include <AP_CANManager/AP_CANDriver.h>
 
 #include <AP_Param/AP_Param.h>
-#include <AP_ESC_Telem/AP_ESC_Telem_Backend.h>
-
-#include "piccolo_protocol/ESCPackets.h"
-#include "piccolo_protocol/LegacyESCPackets.h"
-
-#include "piccolo_protocol/ServoPackets.h"
 
 #include <AP_EFI/AP_EFI_Currawong_ECU.h>
 
-// maximum number of ESC allowed on CAN bus simultaneously
-#define PICCOLO_CAN_MAX_NUM_ESC 16
-#define PICCOLO_CAN_MAX_GROUP_ESC (PICCOLO_CAN_MAX_NUM_ESC / 4)
-
-#define PICCOLO_CAN_MAX_NUM_SERVO 16
-#define PICCOLO_CAN_MAX_GROUP_SERVO (PICCOLO_CAN_MAX_NUM_SERVO / 4)
-
-#ifndef HAL_PICCOLO_CAN_ENABLE
-#define HAL_PICCOLO_CAN_ENABLE (HAL_NUM_CAN_IFACES && !HAL_MINIMIZE_FEATURES)
-#endif
-
-#if HAL_PICCOLO_CAN_ENABLE
-
-#define PICCOLO_MSG_RATE_HZ_MIN 1
-#define PICCOLO_MSG_RATE_HZ_MAX 500
-#define PICCOLO_MSG_RATE_HZ_DEFAULT 50
+#if HAL_MINERVA_CAN_ENABLE
 
 #define PICCOLO_CAN_ECU_ID_DEFAULT 0
 
-class AP_PiccoloCAN : public AP_CANDriver, public AP_ESC_Telem_Backend
+class AP_MinervaCAN : public AP_CANDriver, public AP_ESC_Telem_Backend
 {
 public:
-    AP_PiccoloCAN();
-    ~AP_PiccoloCAN();
+    AP_MinervaCAN();
+    ~AP_MinervaCAN();
 
     // Piccolo message groups form part of the CAN ID of each frame
     enum class MessageGroup : uint8_t {
@@ -73,12 +52,12 @@ public:
     };
 
     /* Do not allow copies */
-    CLASS_NO_COPY(AP_PiccoloCAN);
+    CLASS_NO_COPY(AP_MinervaCAN);
 
     static const struct AP_Param::GroupInfo var_info[];
 
     // Return PiccoloCAN from @driver_index or nullptr if it's not ready or doesn't exist
-    static AP_PiccoloCAN *get_pcan(uint8_t driver_index);
+    static AP_MinervaCAN *get_pcan(uint8_t driver_index);
 
     // initialize PiccoloCAN bus
     void init(uint8_t driver_index, bool enable_filters) override;
@@ -86,32 +65,6 @@ public:
 
     // called from SRV_Channels
     void update();
-
-#if HAL_WITH_ESC_TELEM
-    // send ESC telemetry messages over MAVLink
-    void send_esc_telemetry_mavlink(uint8_t mav_chan);
-#endif /** HAL_WITH_ESC_TELEM **/
-
-    // return true if a particular servo is 'active' on the Piccolo interface
-    bool is_servo_channel_active(uint8_t chan);
-
-    // return true if a particular ESC is 'active' on the Piccolo interface
-    bool is_esc_channel_active(uint8_t chan);
-
-    // return true if a particular servo has been detected on the CAN interface
-    bool is_servo_present(uint8_t chan, uint64_t timeout_ms = 2000);
-
-    // return true if a particular ESC has been detected on the CAN interface
-    bool is_esc_present(uint8_t chan, uint64_t timeout_ms = 2000);
-
-    // return true if a particular servo is enabled
-    bool is_servo_enabled(uint8_t chan);
-
-    // return true if a particular ESC is enabled
-    bool is_esc_enabled(uint8_t chan);
-
-    // test if the Piccolo CAN driver is ready to be armed
-    bool pre_arm_check(char* reason, uint8_t reason_len);
 
 private:
 
@@ -123,20 +76,8 @@ private:
 
     // read frame on CAN bus, returns true on succses
     bool read_frame(AP_HAL::CANFrame &recv_frame, uint64_t timeout);
-
-    // send ESC commands over CAN
-    void send_esc_messages(void);
-
-    // interpret an ESC message received over CAN
-    bool handle_esc_message(AP_HAL::CANFrame &frame);
-
-    // send servo commands over CAN
-    void send_servo_messages(void);
-
-    // interpret a servo message received over CAN
-    bool handle_servo_message(AP_HAL::CANFrame &frame);
-
-#if AP_EFI_CURRAWONG_ECU_ENABLED
+    
+#if HAL_EFI_CURRAWONG_ECU_ENABLED
     void send_ecu_messages(void);
 
     // interpret an ECU message received over CAN
